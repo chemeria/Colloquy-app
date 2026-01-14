@@ -1,0 +1,7 @@
+{
+  "name": "Colloquy - Chemeria AI",
+  "description": "An advanced AI voice representative for Chemeria Consultancy powered by Gemini Live API.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
