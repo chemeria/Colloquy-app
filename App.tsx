@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LiveInterface } from './components/LiveInterface';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Bot, FileText, X, ChevronRight } from 'lucide-react';
+import { Bot, FileText, X, ChevronRight, Github } from 'lucide-react';
 
 const App: React.FC = () => {
   const [showIdentity, setShowIdentity] = useState(false);
@@ -26,7 +26,17 @@ const App: React.FC = () => {
             <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">By Chemeria Consultancy</p>
           </div>
         </div>
-        <div>
+        <div className="flex items-center space-x-3">
+           <a 
+             href="https://github.com"
+             target="_blank"
+             rel="noopener noreferrer"
+             className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 hover:border-slate-600 transition-all text-slate-400 hover:text-white group"
+             aria-label="GitHub Repository"
+           >
+             <Github className="w-4 h-4" />
+             <span className="text-xs font-medium hidden sm:inline">GitHub</span>
+           </a>
            <button 
              onClick={() => setShowIdentity(true)}
              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 hover:border-slate-600 transition-all text-slate-400 hover:text-white group"
