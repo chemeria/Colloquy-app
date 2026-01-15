@@ -5,3 +5,4 @@ import react from '@vitejs/react-swc'
 export default defineConfig({
   base: '/Colloquy-app/',
   plugins: [react()],
+})
