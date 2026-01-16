@@ -206,19 +206,16 @@ export const useGeminiLive = () => {
         }
       });
       
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       const config = {
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-        config: {
-          responseModalities: [Modality.AUDIO],
-          systemInstruction: SYSTEM_INSTRUCTION,
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } },
-          },
+        model: 'gemini-2.0-flash-exp',
+        responseModalities: [Modality.AUDIO],
+        systemInstruction: SYSTEM_INSTRUCTION,
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } },
         },
-      };
-
-      const sessionPromise = ai.live.connect({
+      };      
+   const sessionPromise = ai.live.connect({
         ...config,
         callbacks: {
           onopen: () => {
