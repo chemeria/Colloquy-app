@@ -43,9 +43,6 @@ You are currently promoting the "Colloquy Convo-Chat AI Tool."
 - If you do not know an answer, say: "That is a great question for one of our senior consultants. Let me have them call you back with the exact details. What is the best number to reach you at?"
 - Be concise. Voice interactions require shorter sentences than text.
 `;
-/*
-const SYSTEM_INSTRUCTION = "You are Colloquy, a professional AI representative for Chemeria Consultancy. You are helpful and articulate.";
-*/
 export const useGeminiLive = () => {
   const [status, setStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
@@ -209,14 +206,22 @@ export const useGeminiLive = () => {
       });
       
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+      
       const config = {
-        model: 'gemini-2.0-flash-exp',
+        // Updated for 2026 stable Live performance
+        model: 'gemini-2.5-flash-native-audio-preview-12-2025', 
+        
         responseModalities: [Modality.AUDIO],
-        systemInstruction: SYSTEM_INSTRUCTION,
+        
+        // This object structure is what stops the "Amnesia"
+        systemInstruction: {
+          parts: [{ text: SYSTEM_INSTRUCTION }]
+        },
+        
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } },
         },
-      };      
+      };
    const sessionPromise = ai.live.connect({
         ...config,
         callbacks: {
