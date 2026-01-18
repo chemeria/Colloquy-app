@@ -208,18 +208,19 @@ export const useGeminiLive = () => {
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       
       const config = {
-        // Updated for 2026 stable Live performance
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025', 
+        // Use the universal stable ID to avoid the 1007 "Unsupported" error
+        model: 'models/gemini-2.0-flash-exp', 
         
         responseModalities: [Modality.AUDIO],
         
-        // This object structure is what stops the "Amnesia"
         systemInstruction: {
           parts: [{ text: SYSTEM_INSTRUCTION }]
         },
         
         speechConfig: {
-          voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } },
+          voiceConfig: { 
+            prebuiltVoiceConfig: { voiceName: 'Fenrir' } 
+          },
         },
       };
    const sessionPromise = ai.live.connect({
