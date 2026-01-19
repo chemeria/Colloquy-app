@@ -204,6 +204,8 @@ export const useGeminiLive = () => {
             noiseSuppression: true,
         }
       });
+       
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       
 const sessionPromise = ai.live.connect({
         model: 'models/gemini-2.0-flash-exp',
@@ -369,15 +371,15 @@ const sessionPromise = ai.live.connect({
             }
             cleanupAudio();
           },
-          onerror: (err) => {
+onerror: (err) => {
             console.error("Session error", err);
             isConnectedRef.current = false;
             setErrorMessage(err.message || "Connection error. Please try again.");
             cleanupAudio();
           }
-        }
-      });
-      
+        } // This closes the callbacks object
+      }); // This closes the ai.live.connect call
+
       sessionPromise.catch((err) => {
          console.error("Connection promise rejected:", err);
          if (retryCountRef.current < MAX_RETRIES) {
