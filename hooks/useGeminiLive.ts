@@ -205,15 +205,15 @@ export const useGeminiLive = () => {
         }
       });
       
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-      
-      // We are moving the model string out of the config object 
-      // and passing the instructions as a top-level property
-      const sessionPromise = ai.live.connect({
+const sessionPromise = ai.live.connect({
         model: 'models/gemini-2.0-flash-exp',
-        systemInstruction: SYSTEM_INSTRUCTION, // Sending as a direct string here
+        systemInstruction: {
+          parts: [{ text: SYSTEM_INSTRUCTION }]
+        },
         config: {
-          responseModalities: [Modality.AUDIO],
+          generationConfig: {
+            responseModalities: [Modality.AUDIO],
+          },
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } },
           },
