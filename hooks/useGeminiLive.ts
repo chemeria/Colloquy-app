@@ -207,24 +207,17 @@ export const useGeminiLive = () => {
       
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       
-      const config = {
-        // Use the universal stable ID to avoid the 1007 "Unsupported" error
-        model: 'models/gemini-2.0-flash-exp', 
-        
-        responseModalities: [Modality.AUDIO],
-        
-        systemInstruction: {
-          parts: [{ text: SYSTEM_INSTRUCTION }]
-        },
-        
-        speechConfig: {
-          voiceConfig: { 
-            prebuiltVoiceConfig: { voiceName: 'Fenrir' } 
+      // We are moving the model string out of the config object 
+      // and passing the instructions as a top-level property
+      const sessionPromise = ai.live.connect({
+        model: 'models/gemini-2.0-flash-exp',
+        systemInstruction: SYSTEM_INSTRUCTION, // Sending as a direct string here
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } },
           },
         },
-      };
-   const sessionPromise = ai.live.connect({
-        ...config,
         callbacks: {
           onopen: () => {
             console.log("Session opened");
