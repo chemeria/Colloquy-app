@@ -6,7 +6,8 @@ interface VisualizerProps {
   analyzer: AnalyserNode | null;
 }
 
-export const Visualizer: React.FC<VisualizerProps> = ({ isConnected, volume, analyzer }) => {
+// Removed the 'export' keyword from here to avoid naming conflicts
+const Visualizer: React.FC<VisualizerProps> = ({ isConnected, volume, analyzer }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   useEffect(() => {
@@ -33,3 +34,5 @@ export const Visualizer: React.FC<VisualizerProps> = ({ isConnected, volume, ana
     </div>
   );
 };
+
+export default Visualizer;
