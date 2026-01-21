@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Visualizer } from './Visualizer';
+import Visualizer  from './Visualizer';
 import { useGeminiLive } from '../hooks/useGeminiLive';
 
 export const LiveInterface: React.FC = () => {
