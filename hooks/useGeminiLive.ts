@@ -14,35 +14,27 @@ Chemeria Consultancy is a historic conversational workflow solutions developer b
 - Specialty: Digital sales, marketing, and Public Relations.
 - Hours: Monday through Saturday, 6:00 a.m. to 8:00 p.m.
 
-### KEY CREDIBILITY (USE WHEN ASKED ABOUT EXPERIENCE)
-If a caller questions Chemeria's experience, confidentially mention that Chemeria is a pioneer in US automation:
+### KEY CREDIBILITY
+If a caller questions Chemeria's experience, mention:
 - 1977: Pioneered debt collection office computerization.
 - 1983: Political robo calls.
 - 1989: "Checks by Phone" receivable tools.
-- 2001: Political robo polls.
 - 2024: Advanced Agentic AI for political campaigns and call centers.
 
 ### CURRENT PROMOTION (THE "HOOK")
-You are currently promoting the "Colloquy Convo-Chat AI Tool."
-- Price: Introductory promo starts as low as $35/month.
-- Function: An inbound conversational receptionist widget for websites.
-- Features: Responds to FAQs, handles event inquiries, takes messages, schedules callbacks/appointments.
-- Value Add: Includes transcription and recording of every contact.
+You are promoting the "Colloquy Convo-Chat AI Tool" starting at $35/month. It is an inbound conversational receptionist widget for websites.
 
 ### CONVERSATION GUIDELINES
-1. TONE: Professional but warm. You are the product you are selling—demonstrate capability.
-2. HANDLING INQUIRIES:
-   - If they want to buy/learn more about the Colloquy tool: Briefly pitch the $35/mo tool. Then immediately ask: "May I have your phone number so a senior consultant can call you back with a demo?"
-   - If they are interested in POLITICAL SERVICES: You must ask "What office are you running for, or is it undecided yet?" Then ask: "What is the best phone number for a political consultant to reach you at?"
-   - If they are an existing client: Ask for their name and the nature of the issue. Then ask: "What is the best phone number for your account manager to reach you at?"
-   - If they ask for hours: Mon-Sat, 6am-8pm.
-3. SCHEDULING: Your primary goal for sales inquiries is to book a callback or appointment. You MUST obtain a valid callback phone number before ending the interaction.
+1. TONE: Professional but warm.
+2. SALES: If they want the tool, ask for their phone number for a demo.
+3. POLITICAL: Ask "What office are you running for?" and get their phone number.
+4. SCHEDULING: Your primary goal is to obtain a valid callback phone number.
 
 ### GUARDRAILS
-- Do not make up technical features not listed here.
-- If you do not know an answer, say: "That is a great question for one of our senior consultants. Let me have them call you back with the exact details. What is the best number to reach you at?"
-- Be concise. Voice interactions require shorter sentences than text.
+- Be concise. Voice interactions require shorter sentences.
+- If you don't know an answer, ask for a callback number so a senior consultant can assist.
 `;
+
 export const useGeminiLive = () => {
   const [status, setStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
@@ -50,40 +42,27 @@ export const useGeminiLive = () => {
   const [volume, setVolume] = useState({ input: 0, output: 0 });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Audio Contexts and Nodes
   const inputAudioContextRef = useRef<AudioContext | null>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
   const inputSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const silenceGainRef = useRef<GainNode | null>(null);
-  const keepAliveOscRef = useRef<OscillatorNode | null>(null);
-  const keepAliveGainRef = useRef<GainNode | null>(null);
   
-  // Audio Queue Management
   const nextStartTimeRef = useRef<number>(0);
   const scheduledSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   
-  // Volume Analysis (Refs for performance to avoid state updates in audio loop)
   const currentInputVolumeRef = useRef<number>(0);
   const currentOutputVolumeRef = useRef<number>(0);
   const animationFrameRef = useRef<number | null>(null);
   
-  // API Session
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const isConnectedRef = useRef<boolean>(false);
-  
-  // Auto-Reconnect Logic
   const retryCountRef = useRef<number>(0);
   const MAX_RETRIES = 3;
   const shouldRetryRef = useRef<boolean>(false);
-  
-  // Heartbeat
   const heartbeatIntervalRef = useRef<number | null>(null);
 
-  // High-frequency UI update loop
   const updateVisualizer = useCallback(() => {
-    // Only update React state if values have changed significantly to avoid excessive renders
-    // Or simply update at rAF rate (60fps) which is smoother than audio block rate
     const inVol = currentInputVolumeRef.current;
     const outVol = currentOutputVolumeRef.current;
     
@@ -98,292 +77,138 @@ export const useGeminiLive = () => {
 
   const cleanupAudio = useCallback(() => {
     isConnectedRef.current = false;
-    
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    if (heartbeatIntervalRef.current) window.clearInterval(heartbeatIntervalRef.current);
 
-    // Stop heartbeat
-    if (heartbeatIntervalRef.current) {
-      window.clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-    }
-
-    // Stop keep-alive oscillator
-    if (keepAliveOscRef.current) {
-        try {
-            keepAliveOscRef.current.stop();
-            keepAliveOscRef.current.disconnect();
-        } catch(e) {}
-        keepAliveOscRef.current = null;
-    }
-    if (keepAliveGainRef.current) {
-        try { keepAliveGainRef.current.disconnect(); } catch(e) {}
-        keepAliveGainRef.current = null;
-    }
-
-    // Stop all scheduled sources
-    scheduledSourcesRef.current.forEach(source => {
-      try { source.stop(); } catch (e) {}
-    });
+    scheduledSourcesRef.current.forEach(source => { try { source.stop(); } catch (e) {} });
     scheduledSourcesRef.current.clear();
 
-    // Close contexts
-    if (inputAudioContextRef.current) {
-      try { inputAudioContextRef.current.close(); } catch(e) {}
-      inputAudioContextRef.current = null;
-    }
-    if (outputAudioContextRef.current) {
-      try { outputAudioContextRef.current.close(); } catch(e) {}
-      outputAudioContextRef.current = null;
-    }
-    
-    // Disconnect nodes
-    if (inputSourceRef.current) {
-      try { inputSourceRef.current.disconnect(); } catch(e) {}
-      inputSourceRef.current = null;
-    }
-    if (processorRef.current) {
-      try { processorRef.current.disconnect(); } catch(e) {}
-      processorRef.current = null;
-    }
-    if (silenceGainRef.current) {
-      try { silenceGainRef.current.disconnect(); } catch(e) {}
-      silenceGainRef.current = null;
-    }
+    if (inputAudioContextRef.current) { try { inputAudioContextRef.current.close(); } catch(e) {} }
+    if (outputAudioContextRef.current) { try { outputAudioContextRef.current.close(); } catch(e) {} }
     
     setIsAiSpeaking(false);
     setIsUserSpeaking(false);
     setVolume({ input: 0, output: 0 });
     nextStartTimeRef.current = 0;
     
-    if (!shouldRetryRef.current) {
-        setStatus(ConnectionStatus.DISCONNECTED);
-    }
+    if (!shouldRetryRef.current) setStatus(ConnectionStatus.DISCONNECTED);
   }, []);
 
   const connect = useCallback(async () => {
-    if (!shouldRetryRef.current) {
-        retryCountRef.current = 0;
-    }
+    if (!shouldRetryRef.current) retryCountRef.current = 0;
 
     try {
       setErrorMessage(null);
-      
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setErrorMessage("Your browser does not support audio recording. Please use Chrome, Edge, or Safari.");
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setErrorMessage("Microphone not supported in this browser.");
         return;
       }
 
       setStatus(ConnectionStatus.CONNECTING);
-
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       inputAudioContextRef.current = new AudioContextClass({ sampleRate: 16000 });
       outputAudioContextRef.current = new AudioContextClass({ sampleRate: 24000 });
 
-      // FORCE KEEP ALIVE
-      if (outputAudioContextRef.current) {
-          const osc = outputAudioContextRef.current.createOscillator();
-          const gain = outputAudioContextRef.current.createGain();
-          osc.type = 'sine';
-          osc.frequency.value = 440;
-          gain.gain.value = 0.0001; 
-          osc.connect(gain);
-          gain.connect(outputAudioContextRef.current.destination);
-          osc.start();
-          keepAliveOscRef.current = osc;
-          keepAliveGainRef.current = gain;
-      }
-      
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-            channelCount: 1,
-            echoCancellation: true,
-            autoGainControl: true,
-            noiseSuppression: true,
-        }
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
       });
-       
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-      
+        
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
       const sessionPromise = ai.live.connect({
         model: 'models/gemini-2.0-flash-exp',
         config: {
-          // MOVING THIS INSIDE CONFIG CURES THE AMNESIA
-          systemInstruction: {
-            parts: [{ text: SYSTEM_INSTRUCTION }]
-          },
-          generationConfig: {
-            responseModalities: [Modality.AUDIO],
-          },
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } },
-          },
+          systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+          generationConfig: { responseModalities: [Modality.AUDIO] },
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } } },
         },
         callbacks: {
           onopen: () => {
-            console.log("Session opened - Persona Active");
+            console.log("Session opened");
             setStatus(ConnectionStatus.CONNECTED);
             isConnectedRef.current = true;
-            shouldRetryRef.current = false;
-            retryCountRef.current = 0;
-            
             updateVisualizer();
 
-            if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
-            heartbeatIntervalRef.current = window.setInterval(() => {
-              if (inputAudioContextRef.current?.state === 'suspended') {
-                inputAudioContextRef.current.resume();
-              }
-              if (outputAudioContextRef.current?.state === 'suspended') {
-                outputAudioContextRef.current.resume();
-              }
-            }, 1000);
-
-            if (!inputAudioContextRef.current) return;
-            
-            inputSourceRef.current = inputAudioContextRef.current.createMediaStreamSource(stream);
-            processorRef.current = inputAudioContextRef.current.createScriptProcessor(2048, 1, 1);
-            
-            silenceGainRef.current = inputAudioContextRef.current.createGain();
+            inputSourceRef.current = inputAudioContextRef.current!.createMediaStreamSource(stream);
+            processorRef.current = inputAudioContextRef.current!.createScriptProcessor(2048, 1, 1);
+            silenceGainRef.current = inputAudioContextRef.current!.createGain();
             silenceGainRef.current.gain.value = 0;
 
             processorRef.current.onaudioprocess = (e) => {
-              if (!inputAudioContextRef.current) return;
               const inputData = e.inputBuffer.getChannelData(0);
-              
               let sum = 0;
-              for (let i = 0; i < inputData.length; i += 4) {
-                sum += Math.abs(inputData[i]);
-              }
+              for (let i = 0; i < inputData.length; i += 4) sum += Math.abs(inputData[i]);
               currentInputVolumeRef.current = sum / (inputData.length / 4);
 
-              const pcmBlob = createPcmBlob(inputData);
-              
               sessionPromise.then(session => {
-                  try {
-                    session.sendRealtimeInput({ media: pcmBlob });
-                  } catch (e) {}
+                try { session.sendRealtimeInput({ media: createPcmBlob(inputData) }); } catch (e) {}
               });
             };
 
             inputSourceRef.current.connect(processorRef.current);
             processorRef.current.connect(silenceGainRef.current);
-            silenceGainRef.current.connect(inputAudioContextRef.current.destination);
+            silenceGainRef.current.connect(inputAudioContextRef.current!.destination);
           },
           onmessage: async (message: LiveServerMessage) => {
             if (message.serverContent?.interrupted) {
-              scheduledSourcesRef.current.forEach(source => {
-                try { source.stop(); } catch (e) {}
-              });
+              scheduledSourcesRef.current.forEach(s => s.stop());
               scheduledSourcesRef.current.clear();
               nextStartTimeRef.current = 0;
-              currentOutputVolumeRef.current = 0;
               return;
             }
 
             const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio && outputAudioContextRef.current) {
               const ctx = outputAudioContextRef.current;
-              const currentTime = ctx.currentTime;
+              if (nextStartTimeRef.current < ctx.currentTime) nextStartTimeRef.current = ctx.currentTime + 0.05;
               
-              if (nextStartTimeRef.current < currentTime) {
-                  nextStartTimeRef.current = currentTime + 0.05;
-              }
-              
-              const audioBytes = base64ToBytes(base64Audio);
-              const audioBuffer = await decodeAudioData(audioBytes, ctx, 24000, 1);
-              
+              const audioBuffer = await decodeAudioData(base64ToBytes(base64Audio), ctx, 24000, 1);
               const source = ctx.createBufferSource();
               source.buffer = audioBuffer;
               source.connect(ctx.destination);
               source.start(nextStartTimeRef.current);
               scheduledSourcesRef.current.add(source);
-              
               currentOutputVolumeRef.current = 0.5;
 
               source.onended = () => {
                 scheduledSourcesRef.current.delete(source);
-                if (scheduledSourcesRef.current.size === 0) {
-                    currentOutputVolumeRef.current = 0;
-                }
+                if (scheduledSourcesRef.current.size === 0) currentOutputVolumeRef.current = 0;
               };
-
               nextStartTimeRef.current += audioBuffer.duration;
             }
           },
           onclose: (e) => {
-            console.log("Session closed", e);
             isConnectedRef.current = false;
-
             if (e.code === 1006 && retryCountRef.current < MAX_RETRIES) {
                 shouldRetryRef.current = true;
-                retryCountRef.current += 1;
+                retryCountRef.current++;
                 cleanupAudio();
-                const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 5000);
-                setTimeout(() => { connect(); }, delay);
-                return;
-            }
-            cleanupAudio();
+                setTimeout(() => connect(), 2000);
+            } else { cleanupAudio(); }
           },
-onerror: (err) => {
-            console.error("Session error", err);
-            setErrorMessage(err.message || "Connection error.");
-            cleanupAudio();
-          }
-        } // 1. Closes callbacks
-      }); // 2. Closes ai.live.connect
-
-      sessionPromise.catch((err) => {
-         console.error("Connection promise rejected:", err);
-         if (retryCountRef.current < MAX_RETRIES) {
-             console.log(`Connection failed. Retrying...`);
-             shouldRetryRef.current = true;
-             retryCountRef.current += 1;
-             cleanupAudio();
-             setTimeout(() => connect(), 2000);
-             return;
-         }
-         const msg = err.message || "Unable to connect to service.";
-         setErrorMessage(msg.includes("API Key") ? "Invalid API Key." : msg);
-         setStatus(ConnectionStatus.ERROR);
-         cleanupAudio();
+          onerror: (err) => { setErrorMessage("Connection error."); cleanupAudio(); }
+        }
       });
 
       sessionPromiseRef.current = sessionPromise;
 
     } catch (err: any) {
-      console.error("Failed to connect", err);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setErrorMessage("Microphone access blocked.");
-      } else {
-        setErrorMessage(err.message || "An unexpected error occurred.");
-      }
+      setErrorMessage(err.message || "Failed to connect.");
       setStatus(ConnectionStatus.ERROR);
       cleanupAudio();
     }
   }, [cleanupAudio, updateVisualizer]);
 
   const disconnect = useCallback(async () => {
-    shouldRetryRef.current = false; 
-    isConnectedRef.current = false;
+    shouldRetryRef.current = false;
     if (sessionPromiseRef.current) {
-        try {
-            const session = await sessionPromiseRef.current;
-            /* @ts-ignore */
-            if (session && typeof session.close === 'function') session.close();
-        } catch (e) { console.error(e); }
+        const session = await sessionPromiseRef.current;
+        if (session?.close) session.close();
     }
     cleanupAudio();
   }, [cleanupAudio]);
 
-  useEffect(() => {
-      return () => { 
-          shouldRetryRef.current = false;
-          cleanupAudio(); 
-      };
-  }, [cleanupAudio]);
+  useEffect(() => { return () => { shouldRetryRef.current = false; cleanupAudio(); }; }, [cleanupAudio]);
 
   return { connect, disconnect, status, isUserSpeaking, isAiSpeaking, volume, errorMessage };
 };
