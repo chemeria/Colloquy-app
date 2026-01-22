@@ -125,3 +125,5 @@ const Visualizer: React.FC<VisualizerProps> = ({ inputVolume, outputVolume, isAc
     </div>
   );
 };
+
+export default Visualizer;
