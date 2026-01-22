@@ -1,71 +1,35 @@
-import React, { useState } from 'react';
-import Visualizer  from './Visualizer';
+import React from 'react';
 import { useGeminiLive } from '../hooks/useGeminiLive';
+import { ConnectionStatus } from '../types';
+import Visualizer from './Visualizer';
+import { Phone, PhoneOff } from 'lucide-react';
 
 export const LiveInterface: React.FC = () => {
-  const { connected, connect, disconnect, volume, analyzer } = useGeminiLive();
-  const [activeTab, setActiveTab] = useState<'voice' | 'info'>('voice');
+  const { connect, disconnect, status, volume, isAiSpeaking } = useGeminiLive();
+  const isConnected = status === ConnectionStatus.CONNECTED;
 
   return (
-    <div className="flex flex-col h-[100dvh] text-white font-sans bg-slate-950">
-      {/* Tab Navigation */}
-      <div className="flex border-b border-slate-800 bg-slate-900/50">
-        <button 
-          onClick={() => setActiveTab('voice')}
-          className={`flex-1 py-4 text-sm font-medium transition-colors ${activeTab === 'voice' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400'}`}
-        >
-          AI CONSULTANT
-        </button>
-        <button 
-          onClick={() => setActiveTab('info')}
-          className={`flex-1 py-4 text-sm font-medium transition-colors ${activeTab === 'info' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400'}`}
-        >
-          ABOUT CHEMERIA
-        </button>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-6">
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl font-bold tracking-tighter text-indigo-400 mb-2">COLLOQUY</h1>
+        <div className="flex items-center justify-center space-x-2">
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`} />
+          <span className="text-xs uppercase tracking-widest text-slate-500">{status}</span>
+        </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 relative overflow-hidden flex flex-col items-center justify-center">
-        {activeTab === 'voice' ? (
-          <>
-            <div className="w-full max-w-md aspect-square flex items-center justify-center p-8">
-              <Visualizer isConnected={connected} volume={volume} analyzer={analyzer} />
-            </div>
-            
-            <div className="mt-4 text-center">
-              <div className={`text-xs uppercase tracking-widest mb-2 ${connected ? 'text-blue-400' : 'text-slate-500'}`}>
-                {connected ? 'Line Active' : 'System Ready'}
-              </div>
-              <h2 className="text-xl font-light">
-                {connected ? 'Chemeria AI is Listening' : 'Secure Voice Channel'}
-              </h2>
-            </div>
-          </>
-        ) : (
-          <div className="p-8 max-w-md text-center">
-            <h3 className="text-blue-400 font-semibold mb-2">Chemeria Consultancy</h3>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              Strategic consulting for political, business, and non-profit sectors.
-            </p>
-          </div>
-        )}
+      <div className={`relative transition-all duration-500 ${isAiSpeaking ? 'scale-110' : 'scale-100'}`}>
+        <Visualizer inputVolume={volume.input} outputVolume={volume.output} isActive={isConnected} />
       </div>
 
-      {/* Control Footer - Buttons moved directly here to avoid "Could Not Resolve" errors */}
-      <div className="p-8 pb-12 bg-gradient-to-t from-slate-950 to-transparent flex justify-center">
-        {!connected ? (
-          <button 
-            onClick={connect}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-full font-bold transition-all transform hover:scale-105 shadow-lg shadow-blue-500/20"
-          >
-            START CONSULTATION
+      <div className="mt-12">
+        {!isConnected ? (
+          <button onClick={connect} className="p-6 rounded-full bg-indigo-600 hover:bg-indigo-500 shadow-xl transition-all">
+            <Phone className="w-8 h-8 fill-current" />
           </button>
         ) : (
-          <button 
-            onClick={disconnect}
-            className="bg-red-600 hover:bg-red-500 text-white px-8 py-4 rounded-full font-bold transition-all transform hover:scale-105 shadow-lg shadow-red-500/20"
-          >
-            END SESSION
+          <button onClick={disconnect} className="p-6 rounded-full bg-red-600 hover:bg-red-500 shadow-lg transition-all">
+            <PhoneOff className="w-8 h-8" />
           </button>
         )}
       </div>
