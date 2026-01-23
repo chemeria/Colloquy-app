@@ -48,21 +48,17 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content */}
+{/* Main Content */}
       <main className="flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-center p-4 z-10 relative">
         
-        <div className="text-center mb-10 max-w-lg">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">
+        <div className="text-center mb-6 max-w-lg">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-2 tracking-tight">
             Voice of the Future.
           </h2>
-          <p className="text-slate-400 text-lg leading-relaxed antialiased">
-            Experience our advanced conversational AI. <br className="hidden sm:block"/>
-            Talk naturally. Ask about our history, our tools, or our schedule.
-          </p>
         </div>
 
         {/* Main Interface Card */}
-        <div className="w-full max-w-md bg-slate-800 border border-slate-700 rounded-3xl shadow-2xl relative z-20 overflow-hidden">
+        <div className="w-full max-w-md bg-slate-800 border border-slate-700 rounded-3xl shadow-2xl relative z-20 overflow-visible">
           <ErrorBoundary>
             <LiveInterface />
           </ErrorBoundary>
