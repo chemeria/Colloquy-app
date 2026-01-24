@@ -15,27 +15,26 @@ export const useGeminiLive = () => {
     setStatus(ConnectionStatus.CONNECTING);
     
     try {
-      // 1. Initialize Audio Context
+      // 1. Wake up Audio Context for Mobile
       const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
       audioContextRef.current = new AudioContextClass({ sampleRate: 16000 });
       await audioContextRef.current.resume();
 
-      // 2. Start Microphone immediately to satisfy mobile browser requirements
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: { echoCancellation: true, noiseSuppression: true } 
-      });
+      // 2. Start Microphone immediately (no more hanging!)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      // 3. Setup WebSocket
+      // 3. Connect WebSocket
       const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
       const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${API_KEY}`;
       const socket = new WebSocket(url);
       socketRef.current = socket;
 
       socket.onopen = () => {
+        // SET STATUS TO CONNECTED IMMEDIATELY
         setStatus(ConnectionStatus.CONNECTED);
-        
-        // Send Config
+
+        // Send Setup Config with explicit MIME type
         socket.send(JSON.stringify({
           setup: { 
             model: "models/gemini-2.0-flash-exp",
@@ -46,7 +45,7 @@ export const useGeminiLive = () => {
           }
         }));
 
-        // Start processing audio data
+        // Start Wiggle Logic
         const source = audioContextRef.current!.createMediaStreamSource(stream);
         const processor = audioContextRef.current!.createScriptProcessor(4096, 1, 1);
         processorRef.current = processor;
@@ -63,12 +62,15 @@ export const useGeminiLive = () => {
             sum += Math.abs(s);
           }
           setVolume({ input: sum / inputData.length, output: 0 });
+          
           if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
-              realtimeInput: { mediaChunks: [{ 
-                data: btoa(String.fromCharCode(...new Uint8Array(pcm16.buffer))), 
-                mimeType: 'audio/pcm' 
-              }] }
+              realtimeInput: { 
+                mediaChunks: [{ 
+                  data: btoa(String.fromCharCode(...new Uint8Array(pcm16.buffer))), 
+                  mimeType: 'audio/pcm;rate=16000' // <--- THE FIX
+                }] 
+              }
             }));
           }
         };
@@ -76,9 +78,9 @@ export const useGeminiLive = () => {
 
       socket.onmessage = async (event) => {
         const data = JSON.parse(event.data);
-        if (data.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data) {
-          const base64Data = data.serverContent.modelTurn.parts[0].inlineData.data;
-          const arrayBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0)).buffer;
+        const audio = data.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+        if (audio) {
+          const arrayBuffer = Uint8Array.from(atob(audio), c => c.charCodeAt(0)).buffer;
           const audioBuffer = await audioContextRef.current!.decodeAudioData(arrayBuffer);
           const source = audioContextRef.current!.createBufferSource();
           source.buffer = audioBuffer;
@@ -89,8 +91,10 @@ export const useGeminiLive = () => {
         }
       };
 
-      socket.onclose = () => setStatus(ConnectionStatus.DISCONNECTED);
-      socket.onerror = () => setStatus(ConnectionStatus.ERROR);
+      socket.onerror = (e) => {
+        console.error("Socket Error:", e);
+        setStatus(ConnectionStatus.ERROR);
+      };
 
     } catch (err) {
       console.error(err);
